@@ -28,22 +28,23 @@ public class Fill_inParallel<T> implements Runnable {
 		try {
 			// Bruteforce: O(n) Average/worst-case.   Auxiliary Space: O(1)
 
-			T prevAdj = (T)-1 ;  // Use previous adjacent auxiliary holder
+		Object prevAdj = Integer.MIN_VALUE ;  // Use previous adjacent auxiliary holder
 
-			for (int i = this.startIndex+1; i<this.endIndex; i++) {
-				if (prevAdj>=0 && array[i]==prevAdj)
-					array[i] = newValue;
-
+		for (int i = this.startIndex+1; i<this.endIndex; i++) {
+			if (prevAdj > Integer.MIN_VALUE && array[i]==prevAdj) {
+				array[i] = (T) newValue;
+			}
+			else {
+				if ( array[i]==array[i-1] ) {
+					prevAdj = array[i];
+					array[i-1] = newValue;
+				}
 				else {
-					if ( array[i]==array[i-1] ) {
-						prevAdj = array[i];
-						array[i-1] = newValue;
-					}
-					else
-						prevAdj = -1 ;
+					prevAdj = Integer.MIN_VALUE ; 
 				}
 			}
-        	System.out.println(Thread.currentThread().getName());
+		}
+		System.out.println(Thread.currentThread().getName());
 	    }
 		catch (Exception ex) { ex.printStackTrace(); System.out.println("Exp. Error"); System.exit(0);}
 	}
