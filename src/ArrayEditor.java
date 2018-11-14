@@ -141,8 +141,10 @@ public class ArrayEditor<T> {
 
 		if (c_array.length >= x_to) {
 			// copy elements from position 10 to 20
+			int i=0;
 			for (int x = x_from; x < x_to; x++) {
-				new_Array[x] = c_array[x];
+				new_Array[i] = c_array[x];
+				i++;
 			}	
 		}
 		// c_array = null;   // collected by garbage collector for deletion.
@@ -167,22 +169,27 @@ public class ArrayEditor<T> {
 		int c_YSize = y_to - y_from ;	// cropped y dimension size
 		T [][] new_Array = (T []) new Object[c_XSize][c_YSize]; 
         assert( new_Array.getClass().getComponentType() == c_array.getClass().getComponentType() ) ;
+        assert( new_Array[0].getClass().getComponentType() == c_array[0].getClass().getComponentType() ) ;
 
 		if (c_array.length >= x_to) {
 			// Outer array
+			int i=0;
 			for (int x = x_from; x < x_to; x++) {  // copy elements from position 10 to 20
 				// Inner array
 				if (c_array[x].length >= y_to) {
+					int j=0;
 					for (int y = y_from; y < y_to; y++) {
-						new_Array[x][y] = c_array[x][y];
+						new_Array[i][j] = c_array[x][y];
+						j++;
 					}
 				}
+				i++;
 			}
 		}
 
 		// c_array = null;   // will be collected by garbage collector for deletion.
 		c_array = new_Array;  // copy back to array object.
-		return c_array ;
+		return new_Array ;
 	}
 
     /** 
@@ -196,10 +203,10 @@ public class ArrayEditor<T> {
 	 * No Synchronization. There's no concurrent access to same memory location.
      * </p>
      * 
-     * @param array The 1D array with elements to fill.        
-     * @param newValue The new value .        
-     * @param s_index The starting index.   
-     * @return void.
+     * @param array The 1D array with elements to fill
+     * @param newValue The new value
+     * @param s_index The starting index
+     * @return void
      * Run
     */
 	public void fill (T [] array, T newValue, int s_index) {
@@ -293,7 +300,7 @@ public class ArrayEditor<T> {
 			array[0] = (array[1]>max || array[1]<min)? : (array[1])/2 : array[0]; 
 			// process body positions [ 1 ... end-1 ]
 			for (int i=2; i<arraySize; i++) {
-				if ( array [arraySize-1] > max || array[arraySize-1] < min ) {
+				if ( array[arraySize-1] > max || array[arraySize-1] < min ) {
 					array[i-1] = (array[i-2] + array[i] ) / 2 ;
 				}
 			}
@@ -367,7 +374,7 @@ public class ArrayEditor<T> {
  	 *	For example, given:
 	 * 		[5, 5, 5, 2, 2, 2, 2, 3, 3] 
 	 *  and performing edge detection, the result could be:
-	 *		[0, 0, 1, 1, 0, 0, 1, 1, 0]
+	 *	      [0, 0, 1, 1, 0, 0, 1, 1, 0]
      * </p>
      * 
      * @param array The array with elements to perform edge Detection on.   
@@ -376,7 +383,7 @@ public class ArrayEditor<T> {
 
 	public void edgeDetection (T [] array) {
 		
-	}	
+	}
 
     /**
      * <p>
