@@ -31,12 +31,12 @@ import java.util.Arrays;
 * </p>
 */
 
-public class ArrayEditor<T> {
-	private int n_threads;
+public class ArrayEditor {
+	private int n_threads=4;
 	
 	public ArrayEditor () { }
 	public ArrayEditor (int num_threads) { 
-		this.n_threads = m_threads;
+		this.n_threads = num_threads;
 	}
     /**
      * <p>
@@ -55,33 +55,37 @@ public class ArrayEditor<T> {
      * @param newValue The new value to replace occurances of the old value in the array
      * @return void.
     */
-	public void replace (T [] array, T oldValue, T newValue) throws CloneNotSupportedException 
+	public void replace (int [] array, int oldValue, int newValue) 
 	{
+		// Parallelize among N processors with thread processes.
+		// E.g Divided among (n=4) threads : (0, size/4), (size/4, size/2), (size/2, size/2+size/4), 
+        //								     (size/2+size/4, size)... ; 
 		int size = array.length; 
 
-		// Parallelize if N >= 40
-		if (size>=40) {
-        	ExecutorService executor = Executors.newFixedThreadPool(n_threads);
+		// Parallelize if N >= 20
+		if (size>=20) {
+        	ExecutorService executor = Executors.newFixedThreadPool(this.n_threads);
+	        for (int i = 0; i < size; i+=size/this.n_threads) { // divide among nthreads 
+	        	final int ii = i;
+			   	executor.submit(new Runnable() {
+					@Override
+					public void run() {
+						// Bruteforce: O(n) worst-case.   Auxiliary Space:
+						for (int x = ii; x<ii+(size/n_threads); x++) {
+							if (array[x]== oldValue)
+								array[x] = newValue;
+						}
+			        	System.out.println(Thread.currentThread().getName());
+					}
+				});
 
-        	// E.g Divided among (n=4) threads : (0, size/4), (size/4, size/2), (size/2, size/2+size/4), 
-        	//								     (size/2+size/4, size)... ; 
-	        for (int i = 0; i < size; i+=size/n_threads) {
-				Runnable worker = new Replace_inParallel(array, oldValue, newValue, i, i+size/n_threads);
-	            executor.execute(worker);
 	        }
 	        // shutdown executor service
 	        try {
 	        	executor.shutdown();
-	        	while (!executor.isTerminated()) {} 
-	        	System.out.println("All threads Finished!");
+	        	while (!executor.isTerminated()) {} //System.out.println("All threads Finished!");
 	        }
 			catch (Exception e) { System.err.println("tasks interrupted"); }
-			finally {
-			    if (!executor.isTerminated()) { 
-			    	System.err.println("cancel incomplete tasks"); 
-			    }
-			    executor.shutdownNow();  
-			}
 		}
 		// run serial
 		else {
@@ -98,12 +102,28 @@ public class ArrayEditor<T> {
      * @param oldValue The old value to be searched for occurances in the array
      * @param newValue The new value to replace occurances of the old value in the array
      * @return void.
-    */ 
-	public void replace (T [][] array, T oldValue, T newValue) throws CloneNotSupportedException {
-		// ... Possibly parallelize among N processors with thread processes.
-		for (int x=0; x<array.length; x++) { // x dimension
-			  replace( array[x], oldValue, newValue ); // y dimension
+    */
+	public void replace (int [][] array, int oldValue, int newValue) {
+		// Parallelize among N processors with thread processes.
+		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
+		// x dimension
+		for (int x=0; x<array.length; x++) { 
+		   	// y dimension
+		   	final int xx=x; 
+		   	executor.submit(new Runnable() {
+				@Override
+				public void run() {
+					replace( array[xx], oldValue, newValue );
+				}
+			});
 		}
+		// shutdown executor service
+	    try {
+	    	executor.shutdown();
+	        while (!executor.isTerminated()) {} 
+	        System.out.println("All threads Finished!");
+		}
+		catch (Exception e) { System.err.println("tasks interrupted"); }
 	}
 
     /**
@@ -121,12 +141,9 @@ public class ArrayEditor<T> {
      * @return new_Array The cropped array
      * Run
     */
-	public T [] crop (T [] c_array, int x_from, int x_to) {
-
+	public int [] crop (int [] c_array, int x_from, int x_to) {
 		// cropped outer array size = (x_to-x_from)
-
-		T [] new_Array = (T []) new Object[x_to - x_from]; 
-       
+		int [] new_Array = new int [x_to - x_from]; 
         assert( new_Array.getClass().getComponentType() == c_array.getClass().getComponentType() ) ;
 
 		if (c_array.length >= x_to) {
@@ -135,12 +152,13 @@ public class ArrayEditor<T> {
 			for (int x = x_from; x < x_to; x++) {
 				new_Array[i] = c_array[x];
 				i++;
-			}	
+			}
 		}
 		// c_array = null;   // collected by garbage collector for deletion.
 		c_array = new_Array;  // copy back to array object.
 		return c_array ;
-	}	
+	}
+
 	/**
      * <p> 
      *  Crop - overloaded for 2D.
@@ -154,28 +172,43 @@ public class ArrayEditor<T> {
      * @param y_to The crop end-index y dimension
      * @return new_Array. The resulting array from cropping c_array with x,y edge dimensions
     */
-	public T [][] crop (T [][] c_array, int x_from, int x_to, int y_from, int y_to) {
-		T [][] new_Array = (T []) new Object[x_to-x_from][y_to-y_from ]; 
-		// cropped x dimension size = (x_to-x_from)
-		// cropped y dimension size = (y_to-y_from)
-        assert( new_Array.getClass().getComponentType() == c_array.getClass().getComponentType() ) ;
+	public int [][] crop (int [][] c_array, int x_from, int x_to, int y_from, int y_to) {
+		int [][] new_Array = new int[x_to-x_from][y_to-y_from]; 
+		// 'cropped x dimension size' = (x_to-x_from) and 'cropped y dimension size' = (y_to-y_from)
+        assert( new_Array.getClass().getComponentType()==c_array.getClass().getComponentType());
 
-		if (c_array.length >= x_to) { // check if x within bounds
+		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
+		if (c_array.length > x_to) { // check if x within bounds
 			int i=0;
 			for (int x = x_from; x < x_to; x++) {  // crop x dimension
-				if (c_array[x].length >= y_to) { //  check if y within bounds
-					new_Array[i] = crop (c_array[x], y_from, y_to); // crop y dimension
+				if (c_array[x].length > y_to) {   // check if y within bounds
+					final int xx=x; //
+					final int ii=i; 
+					final int [][] new_Array_xx = c_array; // copy object (reference)
+					// Parallelize among N processors with thread processes. 
+				   	executor.submit(new Runnable() {
+				   		@Override
+				       	public void run() {
+				       		new_Array[ii] = crop (new_Array_xx[xx], y_from, y_to); // crop y dimension
+				      	}
+				   	});
 				}
 				i++;
 			}
 		}
+		// shutdown executor service
+	    try {
+	    	executor.shutdown();
+	        while (!executor.isTerminated()) {}
+		}
+		catch (Exception e) { System.err.println("tasks interrupted"); }
 
 		// c_array = null;   // Will be collected by garbage collector for deletion.
 		c_array = new_Array;  // Copy back to array object. Old reference deleted.
 		return new_Array ; // Return reference to this new array.
 	}
 
-    /** 
+    /**
      * <p>
  	 *  3. Fill: Similar to replace: Starting at a given index in an array, replace adjacent elements
  	 *  		 if their value is the same (similar to the "paint bucket" fill tool in image editing software)
@@ -191,16 +224,16 @@ public class ArrayEditor<T> {
      * @param s_index The starting index
      * @return void. Makes changes to the array object passed by reference.
     */
-	public void fill (T [] array, T newValue, int start_index) {
+	public void fill (int [] array, int newValue, int start_index) {
 		int size = array.length;
 
 		// assuming no possible value in the array can match or exceed 'Integer.MIN_VALUE'.
-		Object prevAdj = Integer.MIN_VALUE ;  // Use previous adjacent auxiliary holder
+		Integer prevAdj = Integer.MIN_VALUE ;  // Use previous adjacent auxiliary holder
 
 		// Serial / bruteforce. Cannot parallelize because i depends on i-1.
 		for (int i = start_index+1; i<size; i++) {
-			if (prevAdj > Integer.MIN_VALUE && array[i]==prevAdj) {
-				array[i] = (T) newValue;
+			if (prevAdj !=null && array[i]==prevAdj) {
+				array[i] = newValue;
 			}
 			else {
 				if ( array[i]==array[i-1] ) {
@@ -208,45 +241,37 @@ public class ArrayEditor<T> {
 					array[i-1] = newValue;
 				}
 				else {
-					prevAdj = Integer.MIN_VALUE ; 
+					prevAdj = null; 
 				}
 			}
 		}
 
-		// ExecutorService executor = Executors.newFixedThreadPool(n_threads);
+		// ExecutorService executor = Executors.newFixedThreadPool(this.n_threads);
 		// Parallelize if N >= 40
-		// if (size>=40) { 
-	    	// int n_threads = 4;
-
+		// if (size>=40) {
 		// 	// E.g Divide among (N=4) threads = (0, size/4), (size/4, size/2), (size/2, size/2+size/4), 
-		// 									 	(size/2+size/4, size)... ;
-	 //        for (int i = s_index; i < size; i+=(size/n_threads) ) {
+		// 	//								 	(size/2+size/4, size)... ;
+	 //        for (int i = s_index; i < size; i+=(size/this.n_threads) ) {
 	 //        	if (i == s_index) {
-	 //        		Runnable worker = new Fill_inParallel(array, oldValue, newValue, i, i+(size/n_threads) );
-	 //            	executor.execute(worker);
+	 //        		(array, oldValue, newValue, i, i+(size/this.n_threads) );
 	 //        	}
 	 //        	// For all other remaining threads start at end of the array processed by previous thread,
 	 //        	//  to cater for the gaps between splited arrays. for eg. thread-1 [1,2,4], thread-2 [4,4,7]
 	 //        	else {
-	 //        		Runnable worker = new Fill_inParallel(array, oldValue, newValue, i-1, i+(size/n_threads) );
-	 //            	executor.execute(worker);
+	 //        		(array, oldValue, newValue, i-1, i+(size/this.n_threads) ); 
 	 //        	}
 	 //        }
 	 //        // shutdown executor service
 	 //        try {
 	 //        	executor.shutdown();
 	 //        	while (!executor.isTerminated()) {} // System.out.println("All threads Finished!");
-	 //        }
-		// 	catch (Exception e) { System.err.println("tasks interrupted"); }
-		// 	finally {
-		// 	    if (!executor.isTerminated()) { System.err.println("cancel incomplete tasks"); }
-		// 	    executor.shutdownNow(); // System.out.println("shutdown finished");
-		// 	}
+	 //        } catch (Exception e) { System.err.println("tasks interrupted"); } 
 		// }
-		// serial 
+		// // serial 
 		// else {
 		// }
 	}
+
     /** 
      * <p>
  	 *  Fill  - Ooverloaded for 2D. Makes changes to the array object passed by reference.
@@ -256,11 +281,24 @@ public class ArrayEditor<T> {
      * @param s_index The starting index.   
      * @return void. Makes changes to the array object passed by reference.
     */
-	public void fill (T [][] array, T newValue, int x_start_index, int y_start_index) {
-		// ... Possibly parallelize among N processors with thread processes.
+	public void fill (int [][] array, int newValue, int x_start_index, int y_start_index) {
+		// Parallelize among N processors with thread processes. 
+		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
 		for (int x = x_start_index; x<array.length; x++) { // x dimension
-			  fill( array[x], newValue, y_start_index); // y dimension
+			final int xx = x;
+		   	executor.submit(new Runnable() {
+		   		@Override
+		       	public void run() {
+					fill( array[xx], newValue, y_start_index ); // y dimension
+		      	}
+		   	});
 		}
+		// shutdown executor service
+	    try {
+	    	executor.shutdown();
+	        while (!executor.isTerminated()) {}
+		}
+		catch (Exception e) { System.err.println("tasks interrupted"); }
 	}
 
     /**
@@ -276,13 +314,13 @@ public class ArrayEditor<T> {
      * @return void. Makes changes to the array object passed by reference.
      * 
     */    
-	public void smooth (T [] array, T min, T max) {
+	public void smooth (int [] array, int min, int max) {
 		int arraySize = array.length ;    // array size
 
 		// If there is one or more neighbors
 		if (arraySize>=2) {
 			// left edge with right neighbor 
-			array[0] = (array[1]>max || array[1]<min)? : (array[1])/2 : array[0]; 
+			array[0] = (array[1]>max || array[1]<min)? (array[1])/2 : array[0]; 
 			// process body positions [ 1 ... end-1 ]
 			for (int i=2; i<arraySize; i++) {
 				if ( array[arraySize-1] > max || array[arraySize-1] < min ) {
@@ -308,11 +346,24 @@ public class ArrayEditor<T> {
      * @return void. Makes changes to the array object passed by reference.
      * Run
     */
-	public void smooth (T [][] array, T min, T max) {
-		int arraySize = array.length;
-		for (int x=0; x< arraySize; x++) { // smooth x dimension
-			smooth(array[x], min, max) ; // smooth y dimension
+	public void smooth (int [][] array, int min, int max) {
+		// Parallelize among N processors with thread processes. 
+		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
+		for (int x=0; x < array.length; x++) { // smooth x dimension
+			final int xx = x;
+		  	executor.submit(new Runnable() {
+		  		@Override
+		       	public void run() {
+					smooth(array[xx], min, max) ; // smooth y dimension
+		       	}
+		   	});
 		}
+		// shutdown executor service
+	    try {
+	    	executor.shutdown();
+	        while (!executor.isTerminated()) {}
+		}
+		catch (Exception e) { System.err.println("tasks interrupted"); }
 	}
 
 	// Extra fun (optional):   
@@ -322,24 +373,53 @@ public class ArrayEditor<T> {
      * </p>
      * 
      * @param array The 1D array with elements to replace.   
+     * @param array2D The 2D array object with neighbors to replace.   
+     * @param top The value indicating if at top edge.
+     * @param bottom The value indicating if at bottom edge.
      * @return void. 
      */
-	public void blur (T [] array) {
+    public void blur (int [] array) {
+    	blur(array, null, 0, 0);
+    }
+	public void blur (int [] array, int [][] array2D, int top, int bottom) {
 		int arraySize = array.length ;    // array size
-		T leftAdj = Integer.MIN_VALUE ;  // Temporary auxiliary holder for left adjacent value
+		int leftAdj = Integer.MIN_VALUE ;  // Temporary auxiliary holder for left adjacent value
 
 		// There is one or more neighbors
 		if (arraySize>=2) {
-			for (i=0; i < arraySize; i++) {
-				// If on the left or right edges of the array  
+			for (int i=0; i < arraySize; i++) {
+				int y_neighbors_sum=0;
+				int y_neighbors_count=0;
+		       	if (array2D!=null) {
+					// Top-left edge   - x has 1 bottom y neighbor Or
+			       	// Top-Middle edge - x has 1 top y neighbor 	
+		       		if (top>0 && bottom>0) {
+		       			y_neighbors_sum = array2D[top][i] ;
+		       			y_neighbors_count = 1;
+		       		}
+			       	// Bottom-Right edge  - x has 1 top y neighbor Or
+			       	// Bottom-Middle edge - x has 1 top y neighbor 
+			       	else if (top<0 && bottom<0) {
+			       		y_neighbors_sum = array2D[bottom][i] ;
+			       		y_neighbors_count = 1;
+			       	}
+			       	// Middle - x has 2 y neighbors
+			       	else { // array[i][xx-1]+array[i][xx+1]
+			       		y_neighbors_sum = array2D[top][i]+array2D[bottom][i] ;
+			       		y_neighbors_count = 2;
+			       	}
+		       	}
+
+				// If on the left or right edges of the array ... x has 1 left/right x neighbor
 				if (i==0 || i==arraySize-1 ) {
 					leftAdj = array[i] ;
-					array[i] = i==0? (array[i]+array[i+1])/2 : (array[arraySize-2]+array[i])/2 ;
+					array[i] = i==0? (array[i]+array[i+1]+y_neighbors_sum)/(2+y_neighbors_count) : 
+					(array[arraySize-2]+array[i]+y_neighbors_sum)/(2+y_neighbors_count) ;
 				}
-				// else process body positions [ 1 ... end-1 ]
+				// else process body positions [ 1 ... end-1 ] ... x has 1 x neighbor
 				else {
 					leftAdj = array[i] ;
-					array[i] = ( array[i-1]+array[i]+array[i+1] )/2 ;
+					array[i] = ( array[i-1]+array[i]+array[i+1]+y_neighbors_sum )/(3+y_neighbors_count) ;
 				}
 			}
 		}
@@ -354,11 +434,39 @@ public class ArrayEditor<T> {
      * @param array The 2D array with elements to replace.   
      * @return void. Makes changes to the array object passed by reference.
      */
-	public void blur (T [][] array) {
-		int arraySize = array.length;
-		for (int x=0; x < arraySize; x++) { // blur x dimension
-			blur(array[x]) ; // blur y dimension
+	public void blur (int [][] array) {
+		// Parallelize among N processors with thread processes. 
+		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
+		
+		for (int x=0; x < array.length; x++) { // blur x dimension
+			final int xx = x;
+		   	executor.submit(new Runnable() {
+		   		@Override
+		       	public void run() {
+		       		// Top-left edge   - x has 2 (1y + 1x) neighbors
+		       		// Top-Middle edge - x has 3 (1y + 2x) neighbors 
+		       		if (x==0) {
+		       			blur(array[xx], array, -1, xx+1) ; // blur y dimension
+		       		}
+		       		// Bottom-Right edge  - x has 2 (1y + 1x) neighbors
+		       		// Bottom-Middle edge - x has 3 (1y + 2x) neighbors 
+		       		else if (x==array.length-1) {
+		       			blur(array[xx], array, xx-1, -1) ; // blur y dimension
+		       		}
+		       		// Middle - x has 4 (2y + 2x) neighbors
+		       		else {
+		       			// array[i][xx-1]+array[i][xx+1]
+		       			blur(array[xx], array, xx-1, xx+1) ; // blur y dimension
+		       		}
+		      	}
+		   	});
 		}
+		// shutdown executor service
+	    try {
+	    	executor.shutdown();
+	        while (!executor.isTerminated()) {}
+		}
+		catch (Exception e) { System.err.println("tasks interrupted"); }
 	}
     /**
      * <p>
@@ -373,8 +481,7 @@ public class ArrayEditor<T> {
      * @return void. 
     */
 
-	public void edgeDetection (T [] array) {
-		
+	public void edgeDetection (int [] array) {
 	}
 
     /**
@@ -384,8 +491,7 @@ public class ArrayEditor<T> {
      * @param array The array with elements to perform edge Detection on.   
      * @return void
     */
-	public void edgeDetection (T [][] array) {
-
+	public void edgeDetection (int [][] array) {
 	}
 
     /** 
@@ -395,29 +501,30 @@ public class ArrayEditor<T> {
      * @param n_Integers The number of integers to generate
      * @return array of Integers
     */
-	public Integer [] GenerateTestArray (int n_Integers) { 
-    	Integer[] test_arr = new int[n_Integers];
+	public int [] GenerateTestArray (int n_Integers) { 
+    	int [] test_arr = new int[n_Integers];
     	for (int i = 0; i < n_Integers; i++) {
-      		test_arr[i] = (Integer)(Math.random()*n_Integers);
+      		test_arr[i] = (int)(Math.random()*n_Integers);
       		// System.out.println(Array[i] + ", " );
     	}
     	return test_arr;
 	}
 
 
-
-
-
-
-	public static void main(String [] args) {
-    //Integer [] large_array = {1,2,3,4,5,6,7,7,7,8,8,3,3,2,1,0,9,76,2,3,4,56,44,267,72,274,47,8,88,6,2,34,67,55,7,7};
-        // pass number of threads to use for parallelized processes.
-        ArrayEditor <Integer> arrayEditor = new ArrayEditor <Integer>( 4 ); 
-        Integer [] large_array = arrayEditor.GenerateTestArray();
+ 	public static void main(String [] args)
+ 	{
+        // Pass number of threads to use for parallelized processes.
+        ArrayEditor arrayEditor = new ArrayEditor( 4 ); 
+        
+        int [] test_array_s = arrayEditor.GenerateTestArray(10);
+        int [] test_array_m = arrayEditor.GenerateTestArray(1000);
+        int [] test_array_l = arrayEditor.GenerateTestArray(1000000);
+    	int [] test_array = {1,2,3,4,5,6,7,7,7,8,8,3,3,2,1,0,9,7,4,56,44,267,3,3,47,6,2,3,3,7,7};
+        
         try {
         	long start_time = System.nanoTime();
         	
-        	arrayEditor.replace(large_array, 7, 111);	    // 1D  (array, oldValue, newValue) 
+        	arrayEditor.replace(test_array, 7, 111);	    // 1D  (array, oldValue, newValue) 
         	// arrayEditor.replace(large_array2D, 7, 111);  // 2D
 
 
@@ -442,9 +549,9 @@ public class ArrayEditor<T> {
         catch (Exception e) { System.err.println("error"); }
 	}
 
-	
-	public void unittest(){
-		//
+
+	public void unittest() {
+		// 
 	}
 
 }
