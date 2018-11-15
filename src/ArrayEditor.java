@@ -100,7 +100,7 @@ public class ArrayEditor<T> {
      * @return void.
     */ 
 	public void replace (T [][] array, T oldValue, T newValue) throws CloneNotSupportedException {
-		// ... Possibly parallelize among N threads
+		// ... Possibly parallelize among N processors with thread processes.
 		for (int x=0; x<array.length; x++) { // x dimension
 			  replace( array[x], oldValue, newValue ); // y dimension
 		}
@@ -155,9 +155,9 @@ public class ArrayEditor<T> {
      * @return new_Array The resulting array from cropping c_array with x,y edge dimensions
     */
 	public T [][] crop (T [][] c_array, int x_from, int x_to, int y_from, int y_to) {
-		int c_XSize = x_to - x_from ; 	// cropped x dimension size
-		int c_YSize = y_to - y_from ;	// cropped y dimension size
-		T [][] new_Array = (T []) new Object[c_XSize][c_YSize]; 
+		T [][] new_Array = (T []) new Object[x_to-x_from][y_to-y_from ]; 
+		// x_to - x_from -> cropped x dimension size
+		// y_to - y_from -> cropped y dimension size
         assert( new_Array.getClass().getComponentType() == c_array.getClass().getComponentType() ) ;
 
 		if (c_array.length >= x_to) { // check if x within bounds
@@ -170,9 +170,9 @@ public class ArrayEditor<T> {
 			}
 		}
 
-		// c_array = null;   // will be collected by garbage collector for deletion.
-		c_array = new_Array;  // copy back to array object.
-		return new_Array ;
+		// c_array = null;   // Will be collected by garbage collector for deletion.
+		c_array = new_Array;  // Copy back to array object. Old reference deleted.
+		return new_Array ; // Return reference to this new array.
 	}
 
     /** 
@@ -192,14 +192,14 @@ public class ArrayEditor<T> {
      * @return void
      * Run
     */
-	public void fill (T [] array, T newValue, int s_index) {
+	public void fill (T [] array, T newValue, int start_index) {
 		int size = array.length;
 
 		// assuming no possible value in the array can match or exceed 'Integer.MIN_VALUE'.
 		Object prevAdj = Integer.MIN_VALUE ;  // Use previous adjacent auxiliary holder
 
 		// Serial / bruteforce. Cannot parallelize because i depends on i-1.
-		for (int i = this.startIndex+1; i<this.endIndex; i++) {
+		for (int i = start_index+1; i<size; i++) {
 			if (prevAdj > Integer.MIN_VALUE && array[i]==prevAdj) {
 				array[i] = (T) newValue;
 			}
@@ -250,7 +250,7 @@ public class ArrayEditor<T> {
 	}
     /** 
      * <p>
- 	 *  Fill  - Ooverloaded for 2D
+ 	 *  Fill  - Ooverloaded for 2D. Makes changes to the array object passed by reference.
      * </p>
      * @param array The 2D array with elements to fill.        
      * @param newValue The new value .        
@@ -258,17 +258,21 @@ public class ArrayEditor<T> {
      * @return void.
      * Run
     */
-	public void fill (T [][] array, T newValue, int s_index) {
+	public void fill (T [][] array, T newValue, int x_start_index, int y_start_index) {
+		// ... Possibly parallelize among N processors with thread processes.
+		for (int x = x_start_index; x<array.length; x++) { // x dimension
+			  fill( array[x], newValue, y_start_index); // y dimension
+		}
 	}
 
-    /** 
+    /**
      * <p>
  	 *  4. Smooth: replace values smaller than a minimum and larger than a maximum with the average of their neighbours
 	 *  For example, smoothing given a min 0 and a max 100 and array:  [40, 5, 200, 15]
 	 *  the result would be:  [40, 5, 10, 15]   ... (5+15)/2 = 10
      * </p>
      * 
-     * @param array The 1D array with elements to replace.        
+     * @param array The 1D array with elements to replace. Makes changes to the array object passed by reference.
      * @param min The minimum value.        
      * @param max The maximum value.   
      * @return void.
@@ -307,7 +311,10 @@ public class ArrayEditor<T> {
      * Run
     */
 	public void smooth (T [][] array, T min, T max) {
-
+		int arraySize = array.length;
+		for (int x=0; x< arraySize; x++) { // smooth x dimension
+			smooth(array[x], min, max) ; // smooth y dimension
+		}
 	}
 
 	// Extra fun (optional):   
@@ -350,6 +357,7 @@ public class ArrayEditor<T> {
      * @return void
      */
 	public void blur (T [][] array) {
+
 	}
     /**
      * <p>
