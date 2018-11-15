@@ -122,10 +122,10 @@ public class ArrayEditor<T> {
      * Run
     */
 	public T [] crop (T [] c_array, int x_from, int x_to) {
-		
-		int cropped_Size = x_to - x_from ;  // cropped outer array size
 
-		T [] new_Array = (T []) new Object[cropped_Size]; 
+		// cropped outer array size = (x_to-x_from)
+
+		T [] new_Array = (T []) new Object[x_to - x_from]; 
        
         assert( new_Array.getClass().getComponentType() == c_array.getClass().getComponentType() ) ;
 
@@ -152,12 +152,12 @@ public class ArrayEditor<T> {
      * @param x_to The crop end-index for x dimension
      * @param y_from The crop start-index y dimension
      * @param y_to The crop end-index y dimension
-     * @return new_Array The resulting array from cropping c_array with x,y edge dimensions
+     * @return new_Array. The resulting array from cropping c_array with x,y edge dimensions
     */
 	public T [][] crop (T [][] c_array, int x_from, int x_to, int y_from, int y_to) {
 		T [][] new_Array = (T []) new Object[x_to-x_from][y_to-y_from ]; 
-		// x_to - x_from -> cropped x dimension size
-		// y_to - y_from -> cropped y dimension size
+		// cropped x dimension size = (x_to-x_from)
+		// cropped y dimension size = (y_to-y_from)
         assert( new_Array.getClass().getComponentType() == c_array.getClass().getComponentType() ) ;
 
 		if (c_array.length >= x_to) { // check if x within bounds
@@ -189,8 +189,7 @@ public class ArrayEditor<T> {
      * @param array The 1D array with elements to fill
      * @param newValue The new value
      * @param s_index The starting index
-     * @return void
-     * Run
+     * @return void. Makes changes to the array object passed by reference.
     */
 	public void fill (T [] array, T newValue, int start_index) {
 		int size = array.length;
@@ -255,8 +254,7 @@ public class ArrayEditor<T> {
      * @param array The 2D array with elements to fill.        
      * @param newValue The new value .        
      * @param s_index The starting index.   
-     * @return void.
-     * Run
+     * @return void. Makes changes to the array object passed by reference.
     */
 	public void fill (T [][] array, T newValue, int x_start_index, int y_start_index) {
 		// ... Possibly parallelize among N processors with thread processes.
@@ -272,10 +270,10 @@ public class ArrayEditor<T> {
 	 *  the result would be:  [40, 5, 10, 15]   ... (5+15)/2 = 10
      * </p>
      * 
-     * @param array The 1D array with elements to replace. Makes changes to the array object passed by reference.
+     * @param array The 1D array with elements to replace.
      * @param min The minimum value.        
      * @param max The maximum value.   
-     * @return void.
+     * @return void. Makes changes to the array object passed by reference.
      * 
     */    
 	public void smooth (T [] array, T min, T max) {
@@ -307,7 +305,7 @@ public class ArrayEditor<T> {
      * @param array The 2D array with elements to replace.        
      * @param min The minimum value.        
      * @param max The maximum value.   
-     * @return void.
+     * @return void. Makes changes to the array object passed by reference.
      * Run
     */
 	public void smooth (T [][] array, T min, T max) {
@@ -324,7 +322,7 @@ public class ArrayEditor<T> {
      * </p>
      * 
      * @param array The 1D array with elements to replace.   
-     * @return void
+     * @return void. 
      */
 	public void blur (T [] array) {
 		int arraySize = array.length ;    // array size
@@ -354,10 +352,13 @@ public class ArrayEditor<T> {
  	 *  Blur - Overloaded for 2D.
      * </p>
      * @param array The 2D array with elements to replace.   
-     * @return void
+     * @return void. Makes changes to the array object passed by reference.
      */
 	public void blur (T [][] array) {
-
+		int arraySize = array.length;
+		for (int x=0; x < arraySize; x++) { // blur x dimension
+			blur(array[x]) ; // blur y dimension
+		}
 	}
     /**
      * <p>
@@ -369,7 +370,7 @@ public class ArrayEditor<T> {
      * </p>
      * 
      * @param array The array with elements to perform edge Detection on.   
-     * @return void
+     * @return void. 
     */
 
 	public void edgeDetection (T [] array) {
@@ -393,7 +394,6 @@ public class ArrayEditor<T> {
      * </p>
      * @param n_Integers The number of integers to generate
      * @return array of Integers
-     * Run
     */
 	public Integer [] GenerateTestArray (int n_Integers) { 
     	Integer[] test_arr = new int[n_Integers];
