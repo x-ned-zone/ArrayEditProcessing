@@ -12,26 +12,23 @@ import java.util.Arrays;
 /**
 * <p>
 *  Program: Array Editor
-*  Problem: A program that performs operations on a given array,
-*  			The operations supported by the program to are: Replace, Crop, Fill, Smooth, Blur, Edge
+*  Problem: A program that performs operations on a given array.
+*  			Operations supported by the program to are: Replace, Crop, Fill, Smooth, Blur, Edge
+* @Author Masixole M. Ntshinga
+* @Version 11/11/2018
 * </br>
 *  Note:
-*   • Style: Maximum line length: 120
-*   • How program accepts input array and provides output.
-*   • For larger project, methods accessed through OOP.
-*   • Edge cases? Input changes (if the arrays were 2-dimensional).
-*   • How is the program tested
+*   • Style: Maximum line length: 120 characters
+*   • How program accepts input array and provides output
+*   • Methods accessed through OOP/instantiation/invocation
+*   • Edge cases?: Methods overlaoded for 2-dimensional arrays
+*   • Program tested with unit tests
 * </br>
-* To further enhance performane, Plan is to parallelize for loops Using: 
+* To further enhance performane, plan is to use DP or parallelize for loops Using: 
 * - Java multi-threading - for shared memory computers
 * - HPC OpenMP(JaMP) - for shared memory computers
 * - MPI - for clusters and distributed memory computers (or super-computers)
 * </p>
-* 
-* @param array The array with elements to replace
-* @param oldValue
-* @param newValue
-* @return void
 */
 
 public class ArrayEditor<T> {
@@ -48,16 +45,6 @@ public class ArrayEditor<T> {
 	 * Assumptions:
 	 * - Array contains integers or floats
 	 * - The order of array elements matters
-	 * </br>
-	 * Dynamic programming Not possible. The runtime complexity (and space) would be worst than bruteforce as analysed
-	 * below:
-	 * - Create array of maps <Element, Original-index> -> O(1).
-	 * - Sort array according to 'Element' with Mergesort into new array -> O(n*log(n)) Average/worst-case.
-	 * - Find elements with Binary search & use index to replace element on original array 
-	 * 		-> O(log(n)) Average/worst-case.
-	 * - Base-case complexity. Best case is O [ n*log(n)+(n * m-occurences) ] and 
-	 *		Average/Worst case is O [ n*log(n) + (n) ].
-	 * - Auxiliary Space: O(n)
 	 * </br>
 	 * Multi-threading used. Runtime -> O (N / number of processors). Proportional to # of processors.
 	 * No Synchronization. There's no concurrent access to same memory location.
@@ -76,8 +63,8 @@ public class ArrayEditor<T> {
 		if (size>=40) {
         	ExecutorService executor = Executors.newFixedThreadPool(n_threads);
 
-        	// E.g Divided among 4 threads = (0, size/4), (size/4, size/2), (size/2, size/2+size/4), 
-        	//								 (size/2+size/4, size)... ; 
+        	// E.g Divided among (n=4) threads : (0, size/4), (size/4, size/2), (size/2, size/2+size/4), 
+        	//								     (size/2+size/4, size)... ; 
 	        for (int i = 0; i < size; i+=size/n_threads) {
 				Runnable worker = new Replace_inParallel(array, oldValue, newValue, i, i+size/n_threads);
 	            executor.execute(worker);
@@ -113,7 +100,10 @@ public class ArrayEditor<T> {
      * @return void.
     */ 
 	public void replace (T [][] array, T oldValue, T newValue) throws CloneNotSupportedException {
-
+		// ... Possibly parallelize among N threads
+		for (int x=0; x<array.length; x++) { // x dimension
+			  replace( array[x], oldValue, newValue ); // y dimension
+		}
 	}
 
     /**
@@ -169,19 +159,12 @@ public class ArrayEditor<T> {
 		int c_YSize = y_to - y_from ;	// cropped y dimension size
 		T [][] new_Array = (T []) new Object[c_XSize][c_YSize]; 
         assert( new_Array.getClass().getComponentType() == c_array.getClass().getComponentType() ) ;
-        assert( new_Array[0].getClass().getComponentType() == c_array[0].getClass().getComponentType() ) ;
 
-		if (c_array.length >= x_to) {
-			// Outer array
+		if (c_array.length >= x_to) { // check if x within bounds
 			int i=0;
-			for (int x = x_from; x < x_to; x++) {  // copy elements from position 10 to 20
-				// Inner array
-				if (c_array[x].length >= y_to) {
-					int j=0;
-					for (int y = y_from; y < y_to; y++) {
-						new_Array[i][j] = c_array[x][y];
-						j++;
-					}
+			for (int x = x_from; x < x_to; x++) {  // crop x dimension
+				if (c_array[x].length >= y_to) { //  check if y within bounds
+					new_Array[i] = crop (c_array[x], y_from, y_to); // crop y dimension
 				}
 				i++;
 			}
