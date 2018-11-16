@@ -26,9 +26,11 @@ would be worst than bruteforce as I analysed below:
     - O ( n*log(n) ) Average worst-case
  3. Search "array of maps" values with Binary search and use Orig-index to replace value on original array:
     - Average case: O ( log(n) + (number of value-occurences) )
-Overal complexity:
-- Best/Average/Worst-case : O ( 1 + n*log(n) + log(n) + (number of value-occurences) )
-Auxiliary space: O(n)
+
+- Overal complexity:
+  - Best/Average/Worst-case : O ( 1 + n*log(n) + log(n) + (number of value-occurences) )
+
+- Auxiliary space: O(n)
 
 
 ## Crop
