@@ -10,6 +10,8 @@ import java.util.concurrent.Executors;
 import java.util.Arrays;
 import java.util.LinkedList; 
 import java.util.Queue; 
+import java.lang.Math.*;
+
 /**
 * <p>
 * @Author Masixole M. Ntshinga
@@ -157,8 +159,8 @@ public class ArrayEditor {
 			}
 		}
 		// c_array = null;   // collected by garbage collector for deletion.
-		c_array = new_Array;  // copy back to array object.
-		return c_array ;
+		// c_array = new_Array;  // copy back to array object.
+		return new_Array ;
 	}
 
 	/**
@@ -535,13 +537,45 @@ public class ArrayEditor {
 		}
 		catch (Exception e) { System.err.println("tasks interrupted"); }
 	}
+
+	// Function to create Gaussian filter 
+	public void blurGaussian (int [][] kArray) {
+	    // intialising standard deviation to 1.0
+	    double sigma = 1.0; 
+	    double rsig = 2.0 * sigma * sigma; 
+	    double radius; 
+	    int w = 5; // weight
+	    double mean = w/2 ;
+
+  		// make sum for normalization 
+    	double sum = 0.0; 
+
+	    // generating nxn kernel 
+	    for (int x = 0; x < kArray.length; x++) { 
+	        for (int y = 0; y < kArray[x].length; y++) { 
+	            radius = Math.sqrt((x-2)*(x-2) + (y-2)*(y-2)); 
+	            if (x+2<kArray.length && y+2<kArray[x].length){ 
+	            	kArray[x+2][y+2] = ((int)(Math.exp(-(radius*radius) / rsig))) / ((int)(Math.PI * rsig));
+	            	sum += kArray[x][y];
+	            }
+	        } 
+	    }
+
+		// Normalize the kernel
+	    for (int x = 0; x < kArray.length; x++) { 
+	        for (int y = 0; y < kArray[x].length; y++) { 
+		        kArray[x][y] /= sum;
+		    }
+		}
+	}
+
     /**
      * <p>
  	 *  2. Edge detection:  Detect places where the values in the array change.
  	 *	For example, given:
 	 * 		[5, 5, 5, 2, 2, 2, 2, 3, 3] 
 	 *  and performing edge detection, the result could be:
-	 *	      [0, 0, 1, 1, 0, 0, 1, 1, 0]
+	 *	    [0, 0, 1, 1, 0, 0, 1, 1, 0]
      * </p>
      * 
      * @param array The array with elements to perform edge Detection on.   
@@ -581,7 +615,8 @@ public class ArrayEditor {
  	public static void main(String [] args)
  	{
         // Pass number of threads to use for parallelized processes.
-        ArrayEditor arrayEditor = new ArrayEditor( 4 ); 
+        int threads = 8 ;
+        ArrayEditor arrayEditor = new ArrayEditor( threads ); 
         
         int [] test_array_s = arrayEditor.GenerateTestArray(10);
         int [] test_array_m = arrayEditor.GenerateTestArray(1000);
@@ -598,12 +633,6 @@ public class ArrayEditor {
 			                    {1, 1, 1, 1, 1, 2, 2, 1}};
 
 		int [][] array1D = {test_array1D};
-        
-		// System.out.println("Array.length = " + test_array.length);
-		// String arrayTested = "[ ";
-		// for (int x=0; x<test_array.length; x++)
-		// { arrayTested += test_array[x] +", " ; }
-		// System.out.println(arrayTested+"]");
 
         try {
         	long start_time = System.nanoTime();
@@ -614,20 +643,24 @@ public class ArrayEditor {
         	int oldValue = 2;
         	int newValue = 200;
 			
-			System.out.println("Testing with:");
+			System.out.println("\nTesting with:");
 			printArray(test_array1D, "Original 1D");
 	       	printArray(test_array2D, "Original 2D");
         	{
 	        	arrayEditor.replace(test_array1D, oldValue, newValue/60);	    // 1D  (array, oldValue, newValue) 
 	        	arrayEditor.replace(test_array2D, oldValue, newValue/60);  // 2D
-	       		printArray(test_array1D, "After 1D replace (v="+oldValue+", replacer="+newValue/60+")");
-	       		printArray(test_array2D, "After 2D replace (v="+oldValue+", replacer="+newValue/60+")");
+	       		printArray(test_array1D, "After 1D replace (v="+oldValue+", replacer="+newValue/60+") "+
+	       			"threads="+threads);
+	       		printArray(test_array2D, "After 2D replace (v="+oldValue+", replacer="+newValue/60+") "+
+	       			"threads="+threads);
 
-	        	int[] newArr = arrayEditor.crop(test_array1D, col_from, col_to);    // 1D  (array, row_from, row_to)
-	        	int[][] newArrD = arrayEditor.crop(test_array2D, row_from, row_to, col_from, col_to);  // 2D  (array, row_from, row_to, col_from, col_to) 
+	        	// 1D  (array, row_from, row_to)
+	        	int[] newArr = arrayEditor.crop(test_array1D, col_from, col_to);    
+	        	// 2D  (array, row_from, row_to, col_from, col_to) 
+	        	int[][] newArrD = arrayEditor.crop(test_array2D, row_from, row_to, col_from, col_to);  
 	       		printArray(newArr, "After 1D crop (col_from="+col_from+", row_to="+col_to+")");
-	       		printArray(newArrD, "After 2D crop (row_from="+row_from+", row_to="+row_to+", col_from="+col_from+", row_to="+col_to+")");
-
+	       		printArray(newArrD, "After 2D crop (row_from="+row_from+", row_to="+row_to+
+	       										 ", col_from="+col_from+", row_to="+col_to+")");
 	        	arrayEditor.fill(test_array1D, newValue, col_from);    // 1D  (array, newValue, s_index)
 	        	arrayEditor.fill(test_array2D, newValue, row_from, col_from);  // 2D  (array, newValue, row_from, col_to)
 	       		printArray(test_array1D,"After 1D fill (v="+newValue+", row="+col_from+")");
@@ -642,6 +675,9 @@ public class ArrayEditor {
 	        	arrayEditor.blur(test_array2D);  // 2D
 	       		printArray(test_array1D,"After 1D blur");
 	       		printArray(test_array2D,"After 2D blur");
+
+	        	// arrayEditor.blurGaussian(test_array2D);  // 2D
+	       		// printArray(test_array2D,"After 2D Blur-Gaussian");
 
 	        	// arrayEditor.edgeDetection(test_array1D);    // 1D
 	        	// arrayEditor.edgeDetection(test_array2D);  // 2D
