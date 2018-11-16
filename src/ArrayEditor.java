@@ -66,10 +66,10 @@ public class ArrayEditor {
 
 		// Parallelize if N >= 20
 		if (size>=20) {
-        	ExecutorService executor = Executors.newFixedThreadPool(this.n_threads);
-	        for (int i = 0; i < size; i+=size/this.n_threads) { // divide among nthreads 
-	        	final int ii = i;
-			   	executor.submit(new Runnable() {
+			ExecutorService executor = Executors.newFixedThreadPool(this.n_threads);
+			for (int i = 0; i < size; i+=size/this.n_threads) { // divide among nthreads
+				final int ii = i;
+				executor.submit(new Runnable() {
 					@Override
 					public void run() {
 						// Bruteforce: O(n) worst-case.   Auxiliary Space:
@@ -77,10 +77,9 @@ public class ArrayEditor {
 							if (array[col]== oldValue)
 								array[col] = newValue;
 						}
-			        	System.out.println(Thread.currentThread().getName());
+						// System.out.println(Thread.currentThread().getName());
 					}
 				});
-
 	        }
 	        // shutdown executor service
 	        try {
@@ -116,7 +115,7 @@ public class ArrayEditor {
 				@Override
 				public void run() {
 					replace( array[rowx], oldValue, newValue );
-					System.out.println(Thread.currentThread().getName());
+					// System.out.println(Thread.currentThread().getName());
 				}
 			});
 		}
@@ -124,7 +123,7 @@ public class ArrayEditor {
 	    try {
 	    	executor.shutdown();
 	        while (!executor.isTerminated()) {} 
-	        System.out.println("All 'replace' threads Finished!");
+	        // System.out.println("All 'replace' threads Finished!");
 		}
 		catch (Exception e) { System.err.println("tasks interrupted"); }
 	}
@@ -194,7 +193,7 @@ public class ArrayEditor {
 				   		@Override
 				       	public void run() {
 				       		new_Array[row_i] = crop (new_Array_x[row_x], col_from, col_to); // crop column dimension
-							System.out.println(Thread.currentThread().getName());
+							// System.out.println(Thread.currentThread().getName());
 				      	}
 				   	});
 				}
@@ -209,13 +208,13 @@ public class ArrayEditor {
 	    try {
 	    	executor.shutdown();
 	        while (!executor.isTerminated()) {}
-	        System.out.println("All 'crop' threads Finished!");
+	        // System.out.println("All 'crop' threads Finished!");
 
 		}
 		catch (Exception e) { System.err.println("tasks interrupted"); }
 
 		// c_array = null;   // Will be collected by garbage collector for deletion.
-		c_array = new_Array;  // Copy back to array object. Old reference deleted.
+		// c_array = new_Array;  // Copy back to array object. Old reference deleted.
 		return new_Array ; // Return reference to this new array.
 	}
 
@@ -608,34 +607,68 @@ public class ArrayEditor {
 
         try {
         	long start_time = System.nanoTime();
-		
         	int col_from=2, col_to=6;
         	int row_from=2, row_to=6;
 
-        	arrayEditor.replace(test_array1D, 7, 111);	    // 1D  (array, oldValue, newValue) 
-        	arrayEditor.replace(test_array2D, 7, 111);  // 2D
-       
-        	arrayEditor.crop(test_array1D, col_from, col_to);    // 1D  (array, row_from, row_to)
-        	arrayEditor.crop(test_array2D, row_from, row_to, col_from, col_to);  // 2D  (array, row_from, row_to, col_from, col_to) 
+        	int min=0, max=2;
+        	int oldValue = 2;
+        	int newValue = 200;
+			
+			System.out.println("Testing with:");
+			printArray(test_array1D, "Original 1D");
+	       	printArray(test_array2D, "Original 2D");
+        	{
+	        	arrayEditor.replace(test_array1D, oldValue, newValue/60);	    // 1D  (array, oldValue, newValue) 
+	        	arrayEditor.replace(test_array2D, oldValue, newValue/60);  // 2D
+	       		printArray(test_array1D, "After 1D replace (v="+oldValue+", replacer="+newValue/60+")");
+	       		printArray(test_array2D, "After 2D replace (v="+oldValue+", replacer="+newValue/60+")");
 
-        	arrayEditor.fill(test_array1D, 100, 6);    // 1D  (array, newValue, s_index)
-        	arrayEditor.fill(test_array2D, 200, row_from, col_to);  // 2D  (array, newValue, row_from, col_to)
+	        	int[] newArr = arrayEditor.crop(test_array1D, col_from, col_to);    // 1D  (array, row_from, row_to)
+	        	int[][] newArrD = arrayEditor.crop(test_array2D, row_from, row_to, col_from, col_to);  // 2D  (array, row_from, row_to, col_from, col_to) 
+	       		printArray(newArr, "After 1D crop (col_from="+col_from+", row_to="+col_to+")");
+	       		printArray(newArrD, "After 2D crop (row_from="+row_from+", row_to="+row_to+", col_from="+col_from+", row_to="+col_to+")");
 
-        	arrayEditor.smooth(test_array1D, 0, 100);    // 1D  (array, min, max)
-        	arrayEditor.smooth(test_array2D, 0, 300);  // 2D
+	        	arrayEditor.fill(test_array1D, newValue, col_from);    // 1D  (array, newValue, s_index)
+	        	arrayEditor.fill(test_array2D, newValue, row_from, col_from);  // 2D  (array, newValue, row_from, col_to)
+	       		printArray(test_array1D,"After 1D fill (v="+newValue+", row="+col_from+")");
+	       		printArray(test_array2D,"After 2D fill (v="+newValue+", row="+row_from+", col="+col_from+")");
 
-        	// arrayEditor.blur(test_array1D);    // 1D
-        	// arrayEditor.blur(test_array2D);  // 2D
+	        	arrayEditor.smooth(test_array1D, min, max);    // 1D  (array, min, max)
+	        	arrayEditor.smooth(test_array2D, min, max);  // 2D 
+	       		printArray(test_array1D,"After 1D smooth (min="+min+", max="+max+")");
+	       		printArray(test_array2D,"After 2D smooth (min="+min+", max="+max+")");
 
-        	// arrayEditor.edgeDetection(test_array1D);    // 1D
-        	// arrayEditor.edgeDetection(test_array2D);  // 2D
-            
-            // System.out.println("Multi-threaded: ElapsedTime = " + (System.nanoTime()-start_time)/1e6 );
-            // System.out.println("Array [ replaced_Pos ] = " + array[5]);   
+	        	arrayEditor.blur(test_array1D);    // 1D
+	        	arrayEditor.blur(test_array2D);  // 2D
+	       		printArray(test_array1D,"After 1D blur");
+	       		printArray(test_array2D,"After 2D blur");
+
+	        	// arrayEditor.edgeDetection(test_array1D);    // 1D
+	        	// arrayEditor.edgeDetection(test_array2D);  // 2D
+	            
+	            // System.out.println("ElapsedTime = " + (System.nanoTime()-start_time)/1e6 );
+	            // System.out.println("Array [ replaced_Pos ] = " + array[5]);   
+        	}
         }
         catch (Exception e) { System.err.println("error"); }
 	}
 
+	public static void printArray (int[] test_array, String label) {
+		System.out.println("\n"+label);
+		for (int c=0; c<test_array.length; c++) { 
+			System.out.print(test_array[c]+", ");
+		}
+		System.out.println("");
+	}
+	public static void printArray (int[][] test_array, String label) {
+		System.out.println(""+label);
+		for (int r=0; r<test_array.length; r++) { 
+			for (int c=0; c<test_array[r].length; c++) {
+				System.out.print(test_array[r][c]+", ");
+			}
+			System.out.println("");
+		}
+	}
 
 	public void unittest() {
 		// 
