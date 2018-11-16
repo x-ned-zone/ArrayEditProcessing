@@ -1,8 +1,9 @@
 # ArrayEditProcessing
 
-## An array editor processing program with six functions
+## An array editor processing program
 
 Programming Langauge: Java
+
 Java Style: 120 characters per line
 
 > To compile and run using makefile:
@@ -11,6 +12,8 @@ Java Style: 120 characters per line
   make run
 
   ```
+
+Six functions implemented below.
 
 ## Replace
 > For 1D and 2D arrays
