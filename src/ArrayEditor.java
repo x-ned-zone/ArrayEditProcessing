@@ -431,8 +431,8 @@ public class ArrayEditor {
 			    neighbors[1] = 1;
 			}
 			// Middle - x has 2 y neighbors
-			else if (y<array2D[top].length) { // array[i][xx-1]+array[i][xx+1]
-				neighbors[0] = array2D[top][y-1]+array2D[bottom][y] ;
+			else if (y<array2D[top].length) { // array[xx-1][i]+array[xx+1][i]
+				neighbors[0] = array2D[top][y]+array2D[bottom][y] ;
 			    neighbors[1] = 2;
 			}
 			else { // no y neighbors
