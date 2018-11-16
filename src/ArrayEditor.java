@@ -8,18 +8,20 @@ import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.Arrays;
-
+import java.util.LinkedList; 
+import java.util.Queue; 
 /**
 * <p>
+* @Author Masixole M. Ntshinga
+* @Version 11/11/2018
+*
 *  Program: Array Editor
 *  Problem: A program that performs operations on a given array.
 *  			Operations supported by the program to are: Replace, Crop, Fill, Smooth, Blur, Edge
-* @Author Masixole M. Ntshinga
-* @Version 11/11/2018
 * </br>
 *  Note:
 *   • Style: Maximum line length: 120 characters
-*   • How program accepts input array and provides output
+*   • Program accepts input array and provides output
 *   • Methods accessed through OOP/instantiation/invocation
 *   • Edge cases?: Methods overlaoded for 2-dimensional arrays
 *   • Program tested with unit tests
@@ -32,7 +34,7 @@ import java.util.Arrays;
 */
 
 public class ArrayEditor {
-	private int n_threads=4;
+	private int n_threads=4; // default threads = 4
 	
 	public ArrayEditor () { }
 	public ArrayEditor (int num_threads) { 
@@ -138,8 +140,7 @@ public class ArrayEditor {
      * @param c_array The 1D array to crop.
      * @param x_from The crop start-index for x dimension
      * @param x_to The crop end-index for x dimension
-     * @return new_Array The cropped array
-     * Run
+     * @return new_Array The cropped array 
     */
 	public int [] crop (int [] c_array, int x_from, int x_to) {
 		// cropped outer array size = (x_to-x_from)
@@ -215,8 +216,6 @@ public class ArrayEditor {
  	 *  For example, given the array: [0, 2, 0, 1, 1, 1, 2, 2, 1], 
 	 *  and filling position 4 with the value "7", the result would be: [0, 2, 0, 7, 7, 7, 2, 2, 1]
 	 * </br>
-	 * Multi-threading used. Runtime -> O (N / number of processors). Proportional to # of processors.
-	 * No Synchronization. There's no concurrent access to same memory location.
      * </p>
      * 
      * @param array The 1D array with elements to fill
@@ -224,81 +223,76 @@ public class ArrayEditor {
      * @param s_index The starting index
      * @return void. Makes changes to the array object passed by reference.
     */
-	public void fill (int [] array, int newValue, int start_index) {
-		int size = array.length;
-
-		// assuming no possible value in the array can match or exceed 'Integer.MIN_VALUE'.
-		Integer prevAdj = Integer.MIN_VALUE ;  // Use previous adjacent auxiliary holder
-
-		// Serial / bruteforce. Cannot parallelize because i depends on i-1.
-		for (int i = start_index+1; i<size; i++) {
-			if (prevAdj !=null && array[i]==prevAdj) {
-				array[i] = newValue;
-			}
-			else {
-				if ( array[i]==array[i-1] ) {
-					prevAdj = array[i];
-					array[i-1] = newValue;
-				}
-				else {
-					prevAdj = null; 
-				}
-			}
+	public int [] fill (int [] array, int newValue, int start_index) {
+		int [][] array1Din2D = {array};
+		int startYindex = 0; // indicates we only process a 1D array within a 2D array
+		try {
+			array = fill(array1Din2D, newValue, startYindex, start_index)[0];
 		}
+		catch (Exception expt)
+		{ System.out.println("fill error"); }
 
-		// ExecutorService executor = Executors.newFixedThreadPool(this.n_threads);
-		// Parallelize if N >= 40
-		// if (size>=40) {
-		// 	// E.g Divide among (N=4) threads = (0, size/4), (size/4, size/2), (size/2, size/2+size/4), 
-		// 	//								 	(size/2+size/4, size)... ;
-	 //        for (int i = s_index; i < size; i+=(size/this.n_threads) ) {
-	 //        	if (i == s_index) {
-	 //        		(array, oldValue, newValue, i, i+(size/this.n_threads) );
-	 //        	}
-	 //        	// For all other remaining threads start at end of the array processed by previous thread,
-	 //        	//  to cater for the gaps between splited arrays. for eg. thread-1 [1,2,4], thread-2 [4,4,7]
-	 //        	else {
-	 //        		(array, oldValue, newValue, i-1, i+(size/this.n_threads) ); 
-	 //        	}
-	 //        }
-	 //        // shutdown executor service
-	 //        try {
-	 //        	executor.shutdown();
-	 //        	while (!executor.isTerminated()) {} // System.out.println("All threads Finished!");
-	 //        } catch (Exception e) { System.err.println("tasks interrupted"); } 
-		// }
-		// // serial 
-		// else {
-		// }
+		return array;
 	}
 
     /** 
      * <p>
- 	 *  Fill  - Ooverloaded for 2D. Makes changes to the array object passed by reference.
+ 	 *  Fill  - Overloaded for 2D. Makes changes to the array object passed by reference.
+ 	 *  Algorithm adapted from Flood fill on wikipedia.
+ 	 *  - To avoid the overhead of queue management, A loop is used over queue for the west and east directions 
+	 *    as an optimization.
      * </p>
      * @param array The 2D array with elements to fill.        
-     * @param newValue The new value .        
+     * @param newValue The new value.        
      * @param s_index The starting index.   
-     * @return void. Makes changes to the array object passed by reference.
+     * @return array. Makes changes to the array object passed by reference.
     */
-	public void fill (int [][] array, int newValue, int x_start_index, int y_start_index) {
-		// Parallelize among N processors with thread processes. 
-		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
-		for (int x = x_start_index; x<array.length; x++) { // x dimension
-			final int xx = x;
-		   	executor.submit(new Runnable() {
-		   		@Override
-		       	public void run() {
-					fill( array[xx], newValue, y_start_index ); // y dimension
-		      	}
-		   	});
-		}
-		// shutdown executor service
-	    try {
-	    	executor.shutdown();
-	        while (!executor.isTerminated()) {}
-		}
-		catch (Exception e) { System.err.println("tasks interrupted"); }
+	public int [][] fill(int [][] array, int replacementValue, int x_start, int y_start) 
+						 throws CloneNotSupportedException {
+		Queue<int[]> queue = new LinkedList<>();
+	  	int [] startNode= {x_start, y_start};
+	  	queue.add(startNode);
+
+	  	// check if x_start< and y_start are within array bounds
+	  	if ( x_start>= 0 && x_start<array.length && y_start>=0 && y_start<array[0].length ){
+	  		int targetValue = array[x_start][y_start];
+			// O ( n target occurrences)
+		  	while (queue.size()>0) {
+		    	int [] left = queue.peek();  //west
+		    	int [] right = queue.peek().clone(); //east
+
+		    	// Complexity : O (n target occurrences to the left)
+		    	// Move 'left' to the left, while (array[x,y] on the left of 'left') is targetValue
+		    	while ((left[0]-1)>=0 && array[left[0]-1][left[1]] == targetValue) {
+		      		left[0] = left[0]-1;
+		    	}
+		    	// Complexity : O (n target occurrences to the right)
+		   	 	// Move 'right' to the right, while (array[x,y] on the right of 'right') is targetValue
+		    	while ((right[0]+1)<array.length && array[right[0]+1][right[1]] == targetValue){
+		      		right[0] = right[0]+1;
+		    	}
+
+			    // For each value n between left and right:
+			    // Complexity : O ( xx (left-right) * yy (left-right)  )
+			    int yy=left[1]; 
+			    for (int xx=left[0]; xx <= right[0]; xx++) {
+			    	//Set the value of array[x][y] to replacementValue
+			    	array[xx][yy] = replacementValue ;
+				    // If the array-value to the top of array[x][y] is target-value
+				    if ( (yy+1)<array[xx].length && array[xx][yy+1] == targetValue) {
+				    	int [] value = {xx, yy+1};
+				        queue.add(value); // add that array-value to Queue
+				    }
+				    // If the array-value to the bottom of n[x][y] is target-value:
+				    if ( (yy-1)>=0 && array[xx][yy-1] == targetValue) {
+				    	int [] value = {xx, yy-1};
+				    	queue.add(value); // add that array-value to Queue
+				    }
+			    }
+			    queue.remove();
+		  } // Continue looping until Queue is exhausted.
+	  	}
+	  return array;
 	}
 
     /**
@@ -313,23 +307,53 @@ public class ArrayEditor {
      * @param max The maximum value.   
      * @return void. Makes changes to the array object passed by reference.
      * 
-    */    
+    */
 	public void smooth (int [] array, int min, int max) {
+		smooth (array, null, 0, 0, min, max);
+	}
+    /**
+     * <p>
+ 	 *  smooth: Smooth helper method - Overload for 2D arrays
+     * </p> 
+     * @param array The 1D array with elements to replace.
+     * @param array2D The 2D array object with neighbors to aid replacement.   
+     * @param top The value indicating if at top edge to check y neighbors. 
+     			  value -1 indicates not at edge.
+     * @param bottom The value indicating if at bottom edge to check y neighbors. 
+     				  value -1 indicates not at edge
+     * @return void.
+    */ 
+	public void smooth (int [] array, int [][] array2D, int top, int bottom, int min, int max) {
 		int arraySize = array.length ;    // array size
 
 		// If there is one or more neighbors
 		if (arraySize>=2) {
-			// left edge with right neighbor 
-			array[0] = (array[1]>max || array[1]<min)? (array[1])/2 : array[0]; 
-			// process body positions [ 1 ... end-1 ]
+			
+			// left edge with right neighbor
+			{
+				int [] y_neighborsL = get_Y_Neighbors(array2D, 0, top, bottom) ; 
+				// position 0, 1 is y neighbors sum, count. 
+				array[0] = (array[1]>max || array[1]<min)? (array[1]+y_neighborsL[0])/(2+y_neighborsL[1]) : array[0]; 
+			}
+			
+			// Process body positions [ 1 ... end-1 ]
 			for (int i=2; i<arraySize; i++) {
-				if ( array[arraySize-1] > max || array[arraySize-1] < min ) {
-					array[i-1] = (array[i-2] + array[i] ) / 2 ;
+				// if there are y neighbors
+		       	// position 0, 1 is y neighbors sum, count. 
+		       	int [] y_neighbors = get_Y_Neighbors(array2D, i-1, top, bottom) ; 
+
+				if ( array[arraySize-1] > max || array[arraySize-1] < min ) { 
+					array[i-1] = (array[i-2] + array[i] + y_neighbors[0] ) / (2+y_neighbors[1]) ;
 				}
 			}
-			// righ edge with left neighbor 
-			array[arraySize-1] = (array[arraySize-2]>max || array[arraySize-2]<min)? 
-									(array[arraySize-2]) / 2 : array[arraySize-1];
+
+			// righ edge with left neighbor
+			{	
+				int [] y_neighborsR = get_Y_Neighbors(array2D, arraySize-1, top, bottom) ; 
+				// position 0, 1 is y neighbors sum, count.
+				array[arraySize-1] = (array[arraySize-2]>max || array[arraySize-2]<min)? 
+									 (array[arraySize-2]+y_neighborsR[0]) / (2+y_neighborsR[1]) : array[arraySize-1];
+			}
 		}
 		// No neighbors
 		else {
@@ -344,7 +368,6 @@ public class ArrayEditor {
      * @param min The minimum value.        
      * @param max The maximum value.   
      * @return void. Makes changes to the array object passed by reference.
-     * Run
     */
 	public void smooth (int [][] array, int min, int max) {
 		// Parallelize among N processors with thread processes. 
@@ -354,7 +377,21 @@ public class ArrayEditor {
 		  	executor.submit(new Runnable() {
 		  		@Override
 		       	public void run() {
-					smooth(array[xx], min, max) ; // smooth y dimension
+		       		// Top-left edge   - x has 1 bottom y neighbor Or
+			       	// Top-Middle edge - x has 1 top y neighbor 
+		       		if (xx==0) {
+						smooth(array[xx], array, -1, xx+1, min, max) ; // smooth y dimension
+		       		}
+			       	// Bottom-Right edge  - x has 1 top y neighbor Or
+			       	// Bottom-Middle edge - x has 1 top y neighbor  
+		       		else if (xx==array.length-1) {
+						smooth(array[xx], array, xx-1, -1, min, max) ; // smooth y dimension
+		       		}
+			       	// Middle - x has 2 y neighbors
+		       		else {
+		       			// array[i][xx-1]+array[i][xx+1]
+						smooth(array[xx], array, xx-1, xx+1, min, max) ; // smooth y dimension
+		       		}
 		       	}
 		   	});
 		}
@@ -366,21 +403,60 @@ public class ArrayEditor {
 		catch (Exception e) { System.err.println("tasks interrupted"); }
 	}
 
+	public int [] get_Y_Neighbors(int[][] array2D, int y, int top, int bottom) {
+		int [] neighbors = {0, 0};  // sum=0, count=0
+		// if there are y neighbors
+		if (array2D!=null) {
+			// Top-left edge   - x has 1 bottom y neighbor Or
+			// Top-Middle edge - x has 1 top y neighbor 	
+		    if (top>0 && bottom>0 && y<array2D[top].length ) {
+		    	neighbors[0] = array2D[top][y] ;
+		       	neighbors[1] = 1;
+		    }
+			// Bottom-Right edge  - x has 1 top y neighbor Or
+			// Bottom-Middle edge - x has 1 top y neighbor 
+			else if (top<0 && bottom<0 && y<array2D[top].length) {
+				neighbors[0] = array2D[bottom][y] ;
+			    neighbors[1] = 1;
+			}
+			// Middle - x has 2 y neighbors
+			else if (y<array2D[top].length) { // array[i][xx-1]+array[i][xx+1]
+				neighbors[0] = array2D[top][y-1]+array2D[bottom][y] ;
+			    neighbors[1] = 2;
+			}
+			else { // no y neighbors
+			}
+		}
+		else { // no y neighbors
+		}
+		return neighbors;
+	}
+
 	// Extra fun (optional):   
     /**
      * <p>
  	 *  1. Blur: Replace every value with the average of itself, and its two neighbours 
      * </p>
      * 
-     * @param array The 1D array with elements to replace.   
-     * @param array2D The 2D array object with neighbors to replace.   
-     * @param top The value indicating if at top edge.
-     * @param bottom The value indicating if at bottom edge.
+     * @param array The 1D array with elements to replace.
      * @return void. 
      */
     public void blur (int [] array) {
     	blur(array, null, 0, 0);
     }
+    /**
+     * <p>
+ 	 *  Blur: Helper method. Replace every value with the average of itself, and its four neighbours 
+     * </p> 
+     * @param array The 1D array with elements to aid replacement.   
+     * @param array2D The 2D array object with neighbors to aid replacement.   
+     * @param top The value indicating if at top edge to check y neighbors. 
+     			  value -1 indicates no at edge.
+     * @param bottom The value indicating if at bottom edge to check y neighbors. 
+     				  value -1 indicates no at edge
+     * @return void.
+     * TODO : re-implement with Gaussian Blur algorithm 
+     */
 	public void blur (int [] array, int [][] array2D, int top, int bottom) {
 		int arraySize = array.length ;    // array size
 		int leftAdj = Integer.MIN_VALUE ;  // Temporary auxiliary holder for left adjacent value
@@ -388,38 +464,20 @@ public class ArrayEditor {
 		// There is one or more neighbors
 		if (arraySize>=2) {
 			for (int i=0; i < arraySize; i++) {
-				int y_neighbors_sum=0;
-				int y_neighbors_count=0;
-		       	if (array2D!=null) {
-					// Top-left edge   - x has 1 bottom y neighbor Or
-			       	// Top-Middle edge - x has 1 top y neighbor 	
-		       		if (top>0 && bottom>0) {
-		       			y_neighbors_sum = array2D[top][i] ;
-		       			y_neighbors_count = 1;
-		       		}
-			       	// Bottom-Right edge  - x has 1 top y neighbor Or
-			       	// Bottom-Middle edge - x has 1 top y neighbor 
-			       	else if (top<0 && bottom<0) {
-			       		y_neighbors_sum = array2D[bottom][i] ;
-			       		y_neighbors_count = 1;
-			       	}
-			       	// Middle - x has 2 y neighbors
-			       	else { // array[i][xx-1]+array[i][xx+1]
-			       		y_neighbors_sum = array2D[top][i]+array2D[bottom][i] ;
-			       		y_neighbors_count = 2;
-			       	}
-		       	}
+				// if there are y neighbors
+				int [] y_neighbors = get_Y_Neighbors(array2D, i, top, bottom) ; 
+				// position 0, 1 is y neighbors sum, count. 
 
-				// If on the left or right edges of the array ... x has 1 left/right x neighbor
+				// If on the left or right edges of the x array ... x has 1 left/right x neighbor
 				if (i==0 || i==arraySize-1 ) {
 					leftAdj = array[i] ;
-					array[i] = i==0? (array[i]+array[i+1]+y_neighbors_sum)/(2+y_neighbors_count) : 
-					(array[arraySize-2]+array[i]+y_neighbors_sum)/(2+y_neighbors_count) ;
+					array[i] = i==0? (array[i]+array[i+1]+y_neighbors[0])/(2+y_neighbors[1]) : 
+									 (array[arraySize-2]+array[i]+y_neighbors[0])/(2+y_neighbors[1]) ;
 				}
 				// else process body positions [ 1 ... end-1 ] ... x has 1 x neighbor
 				else {
 					leftAdj = array[i] ;
-					array[i] = ( array[i-1]+array[i]+array[i+1]+y_neighbors_sum )/(3+y_neighbors_count) ;
+					array[i] = ( array[i-1]+array[i]+array[i+1]+y_neighbors[0] )/(3+y_neighbors[1]) ;
 				}
 			}
 		}
@@ -431,29 +489,29 @@ public class ArrayEditor {
      * <p>
  	 *  Blur - Overloaded for 2D.
      * </p>
-     * @param array The 2D array with elements to replace.   
+     * @param array The 2D array with elements to aid replacement.   
      * @return void. Makes changes to the array object passed by reference.
      */
 	public void blur (int [][] array) {
 		// Parallelize among N processors with thread processes. 
 		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
-		
+
 		for (int x=0; x < array.length; x++) { // blur x dimension
 			final int xx = x;
 		   	executor.submit(new Runnable() {
 		   		@Override
 		       	public void run() {
-		       		// Top-left edge   - x has 2 (1y + 1x) neighbors
-		       		// Top-Middle edge - x has 3 (1y + 2x) neighbors 
-		       		if (x==0) {
+		       		// Top-left edge   - x has 1 bottom y neighbor Or
+			       	// Top-Middle edge - x has 1 top y neighbor 
+		       		if (xx==0) {
 		       			blur(array[xx], array, -1, xx+1) ; // blur y dimension
 		       		}
-		       		// Bottom-Right edge  - x has 2 (1y + 1x) neighbors
-		       		// Bottom-Middle edge - x has 3 (1y + 2x) neighbors 
-		       		else if (x==array.length-1) {
+			       	// Bottom-Right edge  - x has 1 top y neighbor Or
+			       	// Bottom-Middle edge - x has 1 top y neighbor  
+		       		else if (xx==array.length-1) {
 		       			blur(array[xx], array, xx-1, -1) ; // blur y dimension
 		       		}
-		       		// Middle - x has 4 (2y + 2x) neighbors
+			       	// Middle - x has 2 y neighbors
 		       		else {
 		       			// array[i][xx-1]+array[i][xx+1]
 		       			blur(array[xx], array, xx-1, xx+1) ; // blur y dimension
@@ -519,12 +577,38 @@ public class ArrayEditor {
         int [] test_array_s = arrayEditor.GenerateTestArray(10);
         int [] test_array_m = arrayEditor.GenerateTestArray(1000);
         int [] test_array_l = arrayEditor.GenerateTestArray(1000000);
+    	
     	int [] test_array = {1,2,3,4,5,6,7,7,7,8,8,3,3,2,1,0,9,7,4,56,44,267,3,3,47,6,2,3,3,7,7};
+    	// int [][] test_array = {{1, 1, 1, 1, 1, 1, 1, 1}, 
+    	// 						{1, 1, 1, 1, 1, 1, 0, 0}, 
+    	// 						{1, 0, 0, 1, 1, 0, 1, 1}, 
+    	// 					    {1, 2, 2, 2, 2, 0, 1, 0}, 
+    	// 					    {1, 1, 1, 2, 2, 0, 1, 0},
+    	// 					    {1, 1, 1, 2, 2, 2, 2, 0},
+			  //                   {1, 1, 1, 1, 1, 2, 1, 1},
+			  //                   {1, 1, 1, 1, 1, 2, 2, 1}};
         
+        int x_start=4, y_start=4, replacementValue=4;
+		try{
+			int [][] array2D = {test_array};
+			arrayEditor.fill(array2D, 100, 0, 6);
+			// arrayEditor.fill(test_array, replacementValue, x_start, y_start);
+		}
+		catch (Exception expt){
+			System.out.println("fill error");
+		}
+		
+		System.out.println("Array.length = " + test_array.length);
+		String arrayTested = "[ ";
+		for (int x=0; x<test_array.length; x++) {
+			arrayTested += test_array[x] +", " ;
+		}
+		System.out.print(arrayTested+" ]");
+
         try {
         	long start_time = System.nanoTime();
         	
-        	arrayEditor.replace(test_array, 7, 111);	    // 1D  (array, oldValue, newValue) 
+        	// arrayEditor.replace(test_array, 7, 111);	    // 1D  (array, oldValue, newValue) 
         	// arrayEditor.replace(large_array2D, 7, 111);  // 2D
 
 
@@ -543,7 +627,7 @@ public class ArrayEditor {
         	// arrayEditor.edgeDetection(large_array);    // 1D
         	// arrayEditor.edgeDetection(large_array2D);  // 2D
             
-            System.out.println("Multi-threaded: ElapsedTime = " + (System.nanoTime()-start_time)/1e6 );
+            // System.out.println("Multi-threaded: ElapsedTime = " + (System.nanoTime()-start_time)/1e6 );
             // System.out.println("Array [ replaced_Pos ] = " + array[5]);   
         }
         catch (Exception e) { System.err.println("error"); }
