@@ -23,7 +23,7 @@ import java.util.Queue;
 *   • Style: Maximum line length: 120 characters
 *   • Program accepts input array and provides output
 *   • Methods accessed through OOP/instantiation/invocation
-*   • Edge cases?: Methods overlaoded for 2-dimensional arrays
+*   • Edge cases?: Methods overloaded for 2-dimensional arrays
 *   • Program tested with unit tests
 * </br>
 * To further enhance performane, plan is to use DP or parallelize for loops Using: 
@@ -73,9 +73,9 @@ public class ArrayEditor {
 					@Override
 					public void run() {
 						// Bruteforce: O(n) worst-case.   Auxiliary Space:
-						for (int x = ii; x<ii+(size/n_threads); x++) {
-							if (array[x]== oldValue)
-								array[x] = newValue;
+						for (int col = ii; col<ii+(size/n_threads); col++) {
+							if (array[col]== oldValue)
+								array[col] = newValue;
 						}
 			        	System.out.println(Thread.currentThread().getName());
 					}
@@ -109,13 +109,14 @@ public class ArrayEditor {
 		// Parallelize among N processors with thread processes.
 		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
 		// x dimension
-		for (int x=0; x<array.length; x++) { 
+		for (int row=0; row<array.length; row++) { 
 		   	// y dimension
-		   	final int xx=x; 
+		   	final int rowx=row; 
 		   	executor.submit(new Runnable() {
 				@Override
 				public void run() {
-					replace( array[xx], oldValue, newValue );
+					replace( array[rowx], oldValue, newValue );
+					System.out.println(Thread.currentThread().getName());
 				}
 			});
 		}
@@ -123,7 +124,7 @@ public class ArrayEditor {
 	    try {
 	    	executor.shutdown();
 	        while (!executor.isTerminated()) {} 
-	        System.out.println("All threads Finished!");
+	        System.out.println("All 'replace' threads Finished!");
 		}
 		catch (Exception e) { System.err.println("tasks interrupted"); }
 	}
@@ -142,16 +143,17 @@ public class ArrayEditor {
      * @param x_to The crop end-index for x dimension
      * @return new_Array The cropped array 
     */
-	public int [] crop (int [] c_array, int x_from, int x_to) {
-		// cropped outer array size = (x_to-x_from)
-		int [] new_Array = new int [x_to - x_from]; 
+	public int [] crop (int [] c_array, int col_from, int col_to) {
+		// cropped outer array size = (col_to-col_from)
+		assert(col_to>col_from);
+		int [] new_Array = new int [col_to - col_from]; 
         assert( new_Array.getClass().getComponentType() == c_array.getClass().getComponentType() ) ;
 
-		if (c_array.length >= x_to) {
+		if (c_array.length >= col_to) {
 			// copy elements from position 10 to 20
 			int i=0;
-			for (int x = x_from; x < x_to; x++) {
-				new_Array[i] = c_array[x];
+			for (int col = col_from; col < col_to; col++) {
+				new_Array[i] = c_array[col];
 				i++;
 			}
 		}
@@ -173,34 +175,42 @@ public class ArrayEditor {
      * @param y_to The crop end-index y dimension
      * @return new_Array. The resulting array from cropping c_array with x,y edge dimensions
     */
-	public int [][] crop (int [][] c_array, int x_from, int x_to, int y_from, int y_to) {
-		int [][] new_Array = new int[x_to-x_from][y_to-y_from]; 
-		// 'cropped x dimension size' = (x_to-x_from) and 'cropped y dimension size' = (y_to-y_from)
-        assert( new_Array.getClass().getComponentType()==c_array.getClass().getComponentType());
+	public int [][] crop (int [][] c_array, int row_from, int row_to, int col_from, int col_to) {
+		assert(row_to>row_from && col_to>col_from);
+		int [][] new_Array = new int[row_to-row_from][col_to-col_from]; 
+		// 'cropped x dimension size' = (row_to-row_from) and 'cropped y dimension size' = (col_to-col_from)
+        assert(new_Array.getClass().getComponentType()==c_array.getClass().getComponentType());
 
 		ExecutorService executor = Executors.newFixedThreadPool( this.n_threads ); // number of threads
-		if (c_array.length > x_to) { // check if x within bounds
+		if (c_array.length > row_to) { // check if row within bounds
 			int i=0;
-			for (int x = x_from; x < x_to; x++) {  // crop x dimension
-				if (c_array[x].length > y_to) {   // check if y within bounds
-					final int xx=x; //
-					final int ii=i; 
-					final int [][] new_Array_xx = c_array; // copy object (reference)
+			for (int row = row_from; row < row_to; row++) {  // crop row dimension
+				if (c_array[row].length > col_to) {   // check if column within bounds
+					final int row_x=row; 
+					final int row_i=i; 
+					final int [][] new_Array_x = c_array; // copy object (reference)
 					// Parallelize among N processors with thread processes. 
 				   	executor.submit(new Runnable() {
 				   		@Override
 				       	public void run() {
-				       		new_Array[ii] = crop (new_Array_xx[xx], y_from, y_to); // crop y dimension
+				       		new_Array[row_i] = crop (new_Array_x[row_x], col_from, col_to); // crop column dimension
+							System.out.println(Thread.currentThread().getName());
 				      	}
 				   	});
 				}
+				else { // y out of bounds
+				}
 				i++;
 			}
+		}
+		else { // x out of bounds
 		}
 		// shutdown executor service
 	    try {
 	    	executor.shutdown();
 	        while (!executor.isTerminated()) {}
+	        System.out.println("All 'crop' threads Finished!");
+
 		}
 		catch (Exception e) { System.err.println("tasks interrupted"); }
 
@@ -247,15 +257,15 @@ public class ArrayEditor {
      * @param s_index The starting index.   
      * @return array. Makes changes to the array object passed by reference.
     */
-	public int [][] fill(int [][] array, int replacementValue, int x_start, int y_start) 
+	public int [][] fill(int [][] array, int replacementValue, int row_start, int col_start) 
 						 throws CloneNotSupportedException {
 		Queue<int[]> queue = new LinkedList<>();
-	  	int [] startNode= {x_start, y_start};
+	  	int [] startNode= {row_start, col_start};
 	  	queue.add(startNode);
 
-	  	// check if x_start< and y_start are within array bounds
-	  	if ( x_start>= 0 && x_start<array.length && y_start>=0 && y_start<array[0].length ){
-	  		int targetValue = array[x_start][y_start];
+	  	// check if row_start< and col_start are within array bounds
+	  	if ( row_start>= 0 && row_start<array.length && col_start>=0 && col_start<array[0].length ){
+	  		int targetValue = array[row_start][col_start];
 			// O ( n target occurrences)
 		  	while (queue.size()>0) {
 		    	int [] left = queue.peek();  //west
@@ -273,19 +283,19 @@ public class ArrayEditor {
 		    	}
 
 			    // For each value n between left and right:
-			    // Complexity : O ( xx (left-right) * yy (left-right)  )
-			    int yy=left[1]; 
-			    for (int xx=left[0]; xx <= right[0]; xx++) {
+			    // Complexity : O ( row (left-right) * col (left-right)  )
+			    int col=left[1]; 
+			    for (int row=left[0]; row <= right[0]; row++) {
 			    	//Set the value of array[x][y] to replacementValue
-			    	array[xx][yy] = replacementValue ;
+			    	array[row][col] = replacementValue ;
 				    // If the array-value to the top of array[x][y] is target-value
-				    if ( (yy+1)<array[xx].length && array[xx][yy+1] == targetValue) {
-				    	int [] value = {xx, yy+1};
+				    if ( (col+1)<array[row].length && array[row][col+1] == targetValue) {
+				    	int [] value = {row, col+1};
 				        queue.add(value); // add that array-value to Queue
 				    }
 				    // If the array-value to the bottom of n[x][y] is target-value:
-				    if ( (yy-1)>=0 && array[xx][yy-1] == targetValue) {
-				    	int [] value = {xx, yy-1};
+				    if ( (col-1)>=0 && array[row][col-1] == targetValue) {
+				    	int [] value = {row, col-1};
 				    	queue.add(value); // add that array-value to Queue
 				    }
 			    }
@@ -578,54 +588,47 @@ public class ArrayEditor {
         int [] test_array_m = arrayEditor.GenerateTestArray(1000);
         int [] test_array_l = arrayEditor.GenerateTestArray(1000000);
     	
-    	int [] test_array = {1,2,3,4,5,6,7,7,7,8,8,3,3,2,1,0,9,7,4,56,44,267,3,3,47,6,2,3,3,7,7};
-    	// int [][] test_array = {{1, 1, 1, 1, 1, 1, 1, 1}, 
-    	// 						{1, 1, 1, 1, 1, 1, 0, 0}, 
-    	// 						{1, 0, 0, 1, 1, 0, 1, 1}, 
-    	// 					    {1, 2, 2, 2, 2, 0, 1, 0}, 
-    	// 					    {1, 1, 1, 2, 2, 0, 1, 0},
-    	// 					    {1, 1, 1, 2, 2, 2, 2, 0},
-			  //                   {1, 1, 1, 1, 1, 2, 1, 1},
-			  //                   {1, 1, 1, 1, 1, 2, 2, 1}};
+    	int []   test_array1D = {1,2,3,4,5,6,7,7,7,8,8,3,3,2,1,0,9,7,4,5,4,2,3,3,17,2,3,3,7,7};
+    	int [][] test_array2D = {{1, 1, 1, 1, 1, 1, 1, 1},
+    							{1, 1, 1, 1, 1, 1, 0, 0},
+    							{1, 0, 0, 1, 1, 0, 1, 1},
+    						    {1, 2, 2, 2, 2, 0, 1, 0},
+    						    {1, 1, 1, 2, 2, 0, 1, 0},
+    						    {1, 1, 1, 2, 2, 2, 2, 0},
+			                    {1, 1, 1, 1, 1, 2, 1, 1},
+			                    {1, 1, 1, 1, 1, 2, 2, 1}};
+
+		int [][] array1D = {test_array1D};
         
-        int x_start=4, y_start=4, replacementValue=4;
-		try{
-			int [][] array2D = {test_array};
-			arrayEditor.fill(array2D, 100, 0, 6);
-			// arrayEditor.fill(test_array, replacementValue, x_start, y_start);
-		}
-		catch (Exception expt){
-			System.out.println("fill error");
-		}
-		
-		System.out.println("Array.length = " + test_array.length);
-		String arrayTested = "[ ";
-		for (int x=0; x<test_array.length; x++) {
-			arrayTested += test_array[x] +", " ;
-		}
-		System.out.print(arrayTested+" ]");
+		// System.out.println("Array.length = " + test_array.length);
+		// String arrayTested = "[ ";
+		// for (int x=0; x<test_array.length; x++)
+		// { arrayTested += test_array[x] +", " ; }
+		// System.out.println(arrayTested+"]");
 
         try {
         	long start_time = System.nanoTime();
-        	
-        	// arrayEditor.replace(test_array, 7, 111);	    // 1D  (array, oldValue, newValue) 
-        	// arrayEditor.replace(large_array2D, 7, 111);  // 2D
+		
+        	int col_from=2, col_to=6;
+        	int row_from=2, row_to=6;
 
+        	arrayEditor.replace(test_array1D, 7, 111);	    // 1D  (array, oldValue, newValue) 
+        	arrayEditor.replace(test_array2D, 7, 111);  // 2D
+       
+        	arrayEditor.crop(test_array1D, col_from, col_to);    // 1D  (array, row_from, row_to)
+        	arrayEditor.crop(test_array2D, row_from, row_to, col_from, col_to);  // 2D  (array, row_from, row_to, col_from, col_to) 
 
-        	// arrayEditor.crop(large_array, 10, 20);    // 1D  (array, x_from, x_to)
-        	// arrayEditor.crop(large_array2D, 10, 20);  // 2D  (array, x_from, x_to, y_from, y_to) 
+        	arrayEditor.fill(test_array1D, 100, 6);    // 1D  (array, newValue, s_index)
+        	arrayEditor.fill(test_array2D, 200, row_from, col_to);  // 2D  (array, newValue, row_from, col_to)
 
-        	// arrayEditor.fill(large_array, 7, 4);    // 1D  (array, newValue, s_index)
-        	// arrayEditor.fill(large_array2D, 7, 4);  // 2D
+        	arrayEditor.smooth(test_array1D, 0, 100);    // 1D  (array, min, max)
+        	arrayEditor.smooth(test_array2D, 0, 300);  // 2D
 
-        	// arrayEditor.smooth(large_array, 0, 100);    // 1D  (array, min, max)
-        	// arrayEditor.smooth(large_array2D, 0, 100);  // 2D
+        	// arrayEditor.blur(test_array1D);    // 1D
+        	// arrayEditor.blur(test_array2D);  // 2D
 
-        	// arrayEditor.blur(large_array);    // 1D
-        	// arrayEditor.blur(large_array2D);  // 2D
-
-        	// arrayEditor.edgeDetection(large_array);    // 1D
-        	// arrayEditor.edgeDetection(large_array2D);  // 2D
+        	// arrayEditor.edgeDetection(test_array1D);    // 1D
+        	// arrayEditor.edgeDetection(test_array2D);  // 2D
             
             // System.out.println("Multi-threaded: ElapsedTime = " + (System.nanoTime()-start_time)/1e6 );
             // System.out.println("Array [ replaced_Pos ] = " + array[5]);   
