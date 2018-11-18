@@ -4,7 +4,7 @@
 
 Programming Langauge: Java
 
-Java Style: 120 characters per line
+Coding Style: 120 characters per line, Spaces, Standard indentation
 
 > To compile and run using makefile:
   ```
