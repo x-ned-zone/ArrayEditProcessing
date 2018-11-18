@@ -462,9 +462,9 @@ public class ArrayEditor {
      * @param array The 1D array with elements to aid replacement.   
      * @param array2D The 2D array object with neighbors to aid replacement.   
      * @param top The value indicating if at top edge to check y neighbors. 
-     			  value -1 indicates no at edge.
+     			  value -1 indicates not at edge.
      * @param bottom The value indicating if at bottom edge to check y neighbors. 
-     				  value -1 indicates no at edge
+     				  value -1 indicates not at edge
      * @return void.
      * TODO : re-implement with Gaussian Blur algorithm 
      */
@@ -540,33 +540,6 @@ public class ArrayEditor {
 
 	// Function to create Gaussian filter 
 	public void blurGaussian (int [][] kArray) {
-	    // intialising standard deviation to 1.0
-	    double sigma = 1.0; 
-	    double rsig = 2.0 * sigma * sigma; 
-	    double radius; 
-	    int w = 5; // weight
-	    double mean = w/2 ;
-
-  		// make sum for normalization 
-    	double sum = 0.0; 
-
-	    // generating nxn kernel 
-	    for (int x = 0; x < kArray.length; x++) { 
-	        for (int y = 0; y < kArray[x].length; y++) { 
-	            radius = Math.sqrt((x-2)*(x-2) + (y-2)*(y-2)); 
-	            if (x+2<kArray.length && y+2<kArray[x].length){ 
-	            	kArray[x+2][y+2] = ((int)(Math.exp(-(radius*radius) / rsig))) / ((int)(Math.PI * rsig));
-	            	sum += kArray[x][y];
-	            }
-	        } 
-	    }
-
-		// Normalize the kernel
-	    for (int x = 0; x < kArray.length; x++) { 
-	        for (int y = 0; y < kArray[x].length; y++) { 
-		        kArray[x][y] /= sum;
-		    }
-		}
 	}
 
     /**
@@ -635,18 +608,18 @@ public class ArrayEditor {
 		int [][] array1D = {test_array1D};
 
         try {
-        	long start_time = System.nanoTime();
         	int col_from=2, col_to=6;
         	int row_from=2, row_to=6;
 
         	int min=0, max=2;
         	int oldValue = 2;
         	int newValue = 200;
-			
+
 			System.out.println("\nTesting with:");
 			printArray(test_array1D, "Original 1D");
 	       	printArray(test_array2D, "Original 2D");
         	{
+        		long start_time = System.nanoTime();
 	        	arrayEditor.replace(test_array1D, oldValue, newValue/60);	    // 1D  (array, oldValue, newValue) 
 	        	arrayEditor.replace(test_array2D, oldValue, newValue/60);  // 2D
 	       		printArray(test_array1D, "After 1D replace (v="+oldValue+", replacer="+newValue/60+") "+
@@ -681,9 +654,8 @@ public class ArrayEditor {
 
 	        	// arrayEditor.edgeDetection(test_array1D);    // 1D
 	        	// arrayEditor.edgeDetection(test_array2D);  // 2D
-	            
-	            // System.out.println("ElapsedTime = " + (System.nanoTime()-start_time)/1e6 );
-	            // System.out.println("Array [ replaced_Pos ] = " + array[5]);   
+
+	            System.out.println("ElapsedTime = " + (System.nanoTime()-start_time)/1e6 );
         	}
         }
         catch (Exception e) { System.err.println("error"); }
